@@ -19,7 +19,16 @@ logger = logging.getLogger("app")
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from app.routers import auth, users, clubs, courts, matches, turns, bookings
+from app.routers import (
+    auth,
+    users,
+    clubs,
+    courts,
+    matches,
+    turns,
+    bookings,
+    pregame_turns,
+)
 from app.database import engine, Base, get_db
 from app.init_db import create_initial_admins
 from app.services.email import email_service
@@ -79,6 +88,9 @@ app.include_router(clubs.router, prefix="/clubs", tags=["clubs"])
 app.include_router(courts.router, prefix="/courts", tags=["courts"])
 app.include_router(matches.router, prefix="/matches", tags=["matches"])
 app.include_router(turns.router, prefix="/turns", tags=["turns"])
+app.include_router(
+    pregame_turns.router, prefix="/pregame-turns", tags=["pregame-turns"]
+)
 app.include_router(bookings.router, prefix="/bookings", tags=["bookings"])
 
 

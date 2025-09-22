@@ -30,6 +30,7 @@ from app.models.club import Club
 from app.models.court import Court
 from app.models.match import Match
 from app.models.turn import Turn
+from app.models.pregame_turn import PregameTurn
 from app.models.booking import Booking
 
 # Note: Tables will be created by Alembic migrations

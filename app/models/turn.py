@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -7,10 +7,10 @@ from app.database import Base
 
 
 class TurnStatus(enum.Enum):
-    AVAILABLE = "available"
-    BOOKED = "booked"
-    CANCELLED = "cancelled"
-    COMPLETED = "completed"
+    AVAILABLE = "AVAILABLE"
+    BOOKED = "BOOKED"
+    CANCELLED = "CANCELLED"
+    COMPLETED = "COMPLETED"
 
 
 class Turn(Base):
@@ -18,14 +18,13 @@ class Turn(Base):
     __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    court_id = Column(Integer, ForeignKey("courts.id"))
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=False)
-    status = Column(Enum(TurnStatus), default=TurnStatus.AVAILABLE)
-    price = Column(Integer, nullable=False)  # Price in cents
+    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=False)
+    turns_data = Column(
+        JSON, nullable=False
+    )  # Almacena todos los turnos posibles del club
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    court = relationship("app.models.court.Court", back_populates="turns")
+    club = relationship("app.models.club.Club", back_populates="turns")
     bookings = relationship("app.models.booking.Booking", back_populates="turn")

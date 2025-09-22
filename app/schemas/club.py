@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, time
 from enum import Enum
 
 
@@ -27,6 +27,21 @@ class ClubBase(BaseModel):
     address: str
     phone: Optional[str] = None
     description: Optional[str] = None
+
+    # Horarios del club
+    opening_time: time  # Hora de apertura (ej: "08:00")
+    closing_time: time  # Hora de cierre (ej: "22:00")
+    turn_duration_minutes: int = 90  # Duración de cada turno en minutos (1.5 horas)
+    price_per_turn: int = 0  # Precio por turno en centavos
+
+    # Días de la semana que está abierto
+    monday_open: bool = True
+    tuesday_open: bool = True
+    wednesday_open: bool = True
+    thursday_open: bool = True
+    friday_open: bool = True
+    saturday_open: bool = True
+    sunday_open: bool = True
 
 
 class ClubCreate(ClubBase):

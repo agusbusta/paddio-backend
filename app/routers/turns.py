@@ -5,40 +5,50 @@ from datetime import datetime
 
 from app.database import get_db
 from app.crud import turn as crud
-from app.schemas.turn import Turn, TurnCreate, TurnUpdate
+from app.schemas.turn import TurnResponse, TurnCreate, TurnUpdate
 from app.models.turn import TurnStatus
+from app.services.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
 
-@router.post("/", response_model=Turn)
-def create_turn(turn: TurnCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=TurnResponse)
+def create_turn(
+    turn: TurnCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Solo admins pueden crear turnos
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Only admins can create turns")
+
+    # Verificar que el turno pertenezca al club del admin
+    if turn.club_id != current_user.club_id:
+        raise HTTPException(
+            status_code=403, detail="Can only create turns for your own club"
+        )
+
     return crud.create_turn(db=db, turn=turn)
 
 
-@router.get("/", response_model=List[Turn])
+@router.get("/", response_model=List[TurnResponse])
 def read_turns(
     skip: int = 0,
     limit: int = 100,
-    court_id: Optional[int] = None,
-    status: Optional[TurnStatus] = None,
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    club_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     turns = crud.get_turns(
         db=db,
         skip=skip,
         limit=limit,
-        court_id=court_id,
-        status=status,
-        start_time=start_time,
-        end_time=end_time,
+        club_id=club_id,
     )
     return turns
 
 
-@router.get("/{turn_id}", response_model=Turn)
+@router.get("/{turn_id}", response_model=TurnResponse)
 def read_turn(turn_id: int, db: Session = Depends(get_db)):
     db_turn = crud.get_turn(db=db, turn_id=turn_id)
     if db_turn is None:
@@ -46,7 +56,7 @@ def read_turn(turn_id: int, db: Session = Depends(get_db)):
     return db_turn
 
 
-@router.put("/{turn_id}", response_model=Turn)
+@router.put("/{turn_id}", response_model=TurnResponse)
 def update_turn(turn_id: int, turn: TurnUpdate, db: Session = Depends(get_db)):
     db_turn = crud.update_turn(db=db, turn_id=turn_id, turn=turn)
     if db_turn is None:

@@ -1,22 +1,24 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 
-class TurnStatus(str, Enum):
-    AVAILABLE = "available"
-    BOOKED = "booked"
-    CANCELLED = "cancelled"
-    COMPLETED = "completed"
+class TurnDataItem(BaseModel):
+    start_time: str  # Formato "HH:MM"
+    end_time: str  # Formato "HH:MM"
+    price: int  # Precio en centavos
+
+
+class TurnData(BaseModel):
+    club_id: int
+    club_name: str
+    turns: List[TurnDataItem]
 
 
 class TurnBase(BaseModel):
-    court_id: int
-    start_time: datetime
-    end_time: datetime
-    price: int = Field(..., description="Price in cents")
-    status: TurnStatus = TurnStatus.AVAILABLE
+    club_id: int
+    turns_data: TurnData
 
 
 class TurnCreate(TurnBase):
@@ -24,8 +26,7 @@ class TurnCreate(TurnBase):
 
 
 class TurnUpdate(BaseModel):
-    status: Optional[TurnStatus] = None
-    price: Optional[int] = None
+    turns_data: Optional[TurnData] = None
 
 
 class TurnInDB(TurnBase):
@@ -37,5 +38,5 @@ class TurnInDB(TurnBase):
         from_attributes = True
 
 
-class Turn(TurnInDB):
+class TurnResponse(TurnInDB):
     pass

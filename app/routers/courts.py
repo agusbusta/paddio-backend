@@ -33,7 +33,24 @@ def create_court(
             status_code=403, detail="Can only create courts for your own club"
         )
 
-    return crud.create_court(db=db, court=court)
+    # Crear la cancha
+    created_court = crud.create_court(db=db, court=court)
+
+    # Generar turnos automáticamente para la nueva cancha
+    try:
+        from app.crud import club as club_crud
+
+        club_crud.generate_turns_for_club(
+            db=db, club_id=current_user.club_id, days_ahead=30
+        )
+    except Exception as e:
+        # Log el error pero no fallar la creación de la cancha
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error generating turns for new court {created_court.id}: {e}")
+
+    return created_court
 
 
 @router.get("/", response_model=List[CourtResponse])

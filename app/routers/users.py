@@ -281,6 +281,40 @@ def get_admin(
 
 
 @router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
+def register_user(
+    user_data: UserCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    Registro público de jugadores (usuarios normales).
+    """
+    # Verificar si el email ya existe
+    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="El email ya está en uso")
+
+    # Crear usuario normal (no admin)
+    hashed_password = get_password_hash(user_data.password)
+    db_user = User(
+        name=user_data.name,
+        email=user_data.email,
+        phone=user_data.phone,
+        hashed_password=hashed_password,
+        is_admin=False,  # Jugador normal
+        is_super_admin=False,
+        is_active=True,
+    )
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return db_user
+
+
+@router.post(
     "/admins", response_model=AdminResponse, status_code=status.HTTP_201_CREATED
 )
 def create_admin(

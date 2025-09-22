@@ -6,12 +6,24 @@ from app.database import get_db
 from app.crud import booking as crud
 from app.schemas.booking import Booking, BookingCreate, BookingUpdate
 from app.models.booking import BookingStatus
+from app.services.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
 
 @router.post("/", response_model=Booking)
-def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
+def create_booking(
+    booking: BookingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Verificar que el usuario esté reservando para sí mismo
+    if booking.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="You can only make bookings for yourself"
+        )
+
     return crud.create_booking(db=db, booking=booking)
 
 

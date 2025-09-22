@@ -47,5 +47,4 @@ class Court(Base):
     # Relationships
     club = relationship("app.models.club.Club", back_populates="courts")
     matches = relationship("app.models.match.Match", back_populates="court")
-    turns = relationship("app.models.turn.Turn", back_populates="court")
     bookings = relationship("app.models.booking.Booking", back_populates="court")
