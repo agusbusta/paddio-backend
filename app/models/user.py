@@ -38,6 +38,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     is_super_admin = Column(Boolean, default=False)
+    # Campo de ejemplo para probar migraciones
+    last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

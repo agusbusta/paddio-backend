@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-migrations
+        name: Check for pending migrations
+        entry: python scripts/check_migrations.py
+        language: system
+        pass_filenames: false
+        always_run: true

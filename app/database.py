@@ -27,11 +27,10 @@ def get_db():
 # Import all models to ensure they are registered with the Base class
 from app.models.user import User
 from app.models.club import Club
-from app.models.stadium import Stadium
 from app.models.court import Court
 from app.models.match import Match
 from app.models.turn import Turn
 from app.models.booking import Booking
 
-# Create tables only if they don't exist
-Base.metadata.create_all(bind=engine, checkfirst=True)
+# Note: Tables will be created by Alembic migrations
+# Base.metadata.create_all(bind=engine, checkfirst=True)

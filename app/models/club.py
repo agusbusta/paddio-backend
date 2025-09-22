@@ -13,6 +13,4 @@ class Club(Base):
     contact = Column(String, nullable=False)
 
     # Relationships
-    stadiums = relationship(
-        "Stadium", back_populates="club", cascade="all, delete-orphan"
-    )
+    courts = relationship("Court", back_populates="club", cascade="all, delete-orphan")

@@ -6,7 +6,7 @@ from datetime import datetime
 class CourtBase(BaseModel):
     name: str
     description: Optional[str] = None
-    stadium_id: int
+    club_id: int
     surface_type: str
     is_indoor: bool = False
     is_available: bool = True

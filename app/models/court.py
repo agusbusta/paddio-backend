@@ -37,14 +37,14 @@ class Court(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    stadium_id = Column(Integer, ForeignKey("stadiums.id"), nullable=False)
+    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=False)
     surface_type = Column(String)  # e.g., clay, grass, hard
     is_covered = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    stadium = relationship("app.models.stadium.Stadium", back_populates="courts")
+    club = relationship("app.models.club.Club", back_populates="courts")
     matches = relationship("app.models.match.Match", back_populates="court")
     turns = relationship("app.models.turn.Turn", back_populates="court")
     bookings = relationship("app.models.booking.Booking", back_populates="court")
