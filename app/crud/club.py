@@ -13,11 +13,20 @@ def get_clubs(db: Session, skip: int = 0, limit: int = 100) -> List[Club]:
     return db.query(Club).offset(skip).limit(limit).all()
 
 
-def create_club(db: Session, club: ClubCreate) -> Club:
+def create_club(db: Session, club: ClubCreate, admin_user_id: int) -> Club:
     db_club = Club(**club.model_dump())
     db.add(db_club)
     db.commit()
     db.refresh(db_club)
+
+    # Asignar el club al admin
+    from app.models.user import User
+
+    admin_user = db.query(User).filter(User.id == admin_user_id).first()
+    if admin_user:
+        admin_user.club_id = db_club.id
+        db.commit()
+
     return db_club
 
 

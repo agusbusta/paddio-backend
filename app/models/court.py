@@ -37,10 +37,11 @@ class Court(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
     club_id = Column(Integer, ForeignKey("clubs.id"), nullable=False)
     surface_type = Column(String)  # e.g., clay, grass, hard
-    is_covered = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True)
+    is_indoor = Column(Boolean, default=False)
+    is_available = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

@@ -5,13 +5,27 @@ from typing import List
 from app.database import get_db
 from app.crud import club as crud
 from app.schemas.club import ClubResponse, ClubCreate, ClubUpdate
+from app.services.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
 
 @router.post("/", response_model=ClubResponse)
-def create_club(club: ClubCreate, db: Session = Depends(get_db)):
-    return crud.create_club(db=db, club=club)
+def create_club(
+    club: ClubCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Solo admins pueden crear clubs
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Only admins can create clubs")
+
+    # Verificar que el admin no tenga ya un club
+    if current_user.club_id is not None:
+        raise HTTPException(status_code=400, detail="Admin already has a club")
+
+    return crud.create_club(db=db, club=club, admin_user_id=current_user.id)
 
 
 @router.get("/", response_model=List[ClubResponse])

@@ -5,12 +5,34 @@ from typing import List
 from app.database import get_db
 from app.crud import court as crud
 from app.schemas.court import CourtResponse, CourtCreate, CourtUpdate
+from app.services.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
 
 @router.post("/", response_model=CourtResponse)
-def create_court(court: CourtCreate, db: Session = Depends(get_db)):
+def create_court(
+    court: CourtCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Solo admins pueden crear canchas
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Only admins can create courts")
+
+    # Verificar que el admin tenga un club
+    if not current_user.club_id:
+        raise HTTPException(
+            status_code=400, detail="Admin must have a club to create courts"
+        )
+
+    # Verificar que la cancha pertenezca al club del admin
+    if court.club_id != current_user.club_id:
+        raise HTTPException(
+            status_code=403, detail="Can only create courts for your own club"
+        )
+
     return crud.create_court(db=db, court=court)
 
 

@@ -41,6 +41,8 @@ class User(Base):
     # Campo de ejemplo para probar migraciones
     last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Club que administra (solo para admins)
+    club_id = Column(Integer, ForeignKey("clubs.id"), nullable=True)
 
     # Relationships
     matches = relationship("Match", secondary=match_players, back_populates="players")
@@ -49,3 +51,5 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    # Relación con el club que administra
+    club = relationship("Club", back_populates="admin")

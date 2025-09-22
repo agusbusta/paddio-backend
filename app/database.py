@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:postgres@localhost/paddio"
+    "DATABASE_URL", "postgresql://postgres:password@localhost:5432/paddio"
 )
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
