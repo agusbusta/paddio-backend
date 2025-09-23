@@ -24,6 +24,8 @@ class PregameTurnBase(BaseModel):
     player2_id: Optional[int] = None
     player3_id: Optional[int] = None
     player4_id: Optional[int] = None
+    player_side: Optional[str] = None  # "reves" o "drive"
+    player_court_position: Optional[str] = None  # "izquierda" o "derecha"
 
 
 class PregameTurnCreate(PregameTurnBase):
@@ -36,6 +38,8 @@ class PregameTurnUpdate(BaseModel):
     player2_id: Optional[int] = None
     player3_id: Optional[int] = None
     player4_id: Optional[int] = None
+    player_side: Optional[str] = None
+    player_court_position: Optional[str] = None
 
 
 class PregameTurnInDB(PregameTurnBase):

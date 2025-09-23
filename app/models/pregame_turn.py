@@ -33,6 +33,10 @@ class PregameTurn(Base):
     player3_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     player4_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+    # Posiciones de los jugadores en la cancha
+    player_side = Column(String(10), nullable=True)  # "reves" o "drive"
+    player_court_position = Column(String(15), nullable=True)  # "izquierda" o "derecha"
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

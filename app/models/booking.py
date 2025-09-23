@@ -18,7 +18,7 @@ class Booking(Base):
     __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
-    turn_id = Column(Integer, ForeignKey("turns.id"))
+    pregame_turn_id = Column(Integer, ForeignKey("pregame_turns.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     court_id = Column(Integer, ForeignKey("courts.id"))
     match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
@@ -28,7 +28,7 @@ class Booking(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    turn = relationship("app.models.turn.Turn", back_populates="bookings")
+    pregame_turn = relationship("app.models.pregame_turn.PregameTurn")
     user = relationship("app.models.user.User", back_populates="bookings")
     court = relationship("app.models.court.Court", back_populates="bookings")
     match = relationship("app.models.match.Match", back_populates="bookings")

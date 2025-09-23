@@ -32,12 +32,17 @@ def read_bookings(
     skip: int = 0,
     limit: int = 100,
     user_id: Optional[int] = None,
-    turn_id: Optional[int] = None,
+    pregame_turn_id: Optional[int] = None,
     status: Optional[BookingStatus] = None,
     db: Session = Depends(get_db),
 ):
     bookings = crud.get_bookings(
-        db=db, skip=skip, limit=limit, user_id=user_id, turn_id=turn_id, status=status
+        db=db,
+        skip=skip,
+        limit=limit,
+        user_id=user_id,
+        pregame_turn_id=pregame_turn_id,
+        status=status,
     )
     return bookings
 

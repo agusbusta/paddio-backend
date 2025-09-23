@@ -27,4 +27,4 @@ class Turn(Base):
 
     # Relationships
     club = relationship("app.models.club.Club", back_populates="turns")
-    bookings = relationship("app.models.booking.Booking", back_populates="turn")
+    # Removed bookings relationship - now bookings relate to pregame_turns

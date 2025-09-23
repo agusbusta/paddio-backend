@@ -12,7 +12,7 @@ class BookingStatus(str, Enum):
 
 
 class BookingBase(BaseModel):
-    turn_id: int
+    pregame_turn_id: int
     user_id: int
     status: BookingStatus = BookingStatus.PENDING
     payment_status: str = "pending"
