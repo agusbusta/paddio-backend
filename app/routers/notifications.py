@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 import logging
 from pydantic import BaseModel
 
@@ -262,9 +263,9 @@ def send_broadcast_notification(
 ):
     """
     Enviar notificación masiva a usuarios.
-    
+
     Solo disponible para super admins.
-    
+
     Parámetros:
     - category: Filtrar por categoría de usuario (opcional)
     - only_active_users: Solo enviar a usuarios activos (default: True)
@@ -283,18 +284,17 @@ def send_broadcast_notification(
 
     # Obtener usuarios según filtros
     users_query = db.query(User).filter(
-        User.is_admin == False,
-        User.is_super_admin == False
+        User.is_admin == False, User.is_super_admin == False
     )
-    
+
     if only_active_users:
         users_query = users_query.filter(User.is_active == True)
-    
+
     if category:
         users_query = users_query.filter(User.category == category)
-    
+
     target_users = users_query.all()
-    
+
     if not target_users:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -304,7 +304,7 @@ def send_broadcast_notification(
     # Obtener todos los tokens de los usuarios objetivo
     all_tokens = []
     users_with_tokens = 0
-    
+
     for user in target_users:
         user_tokens = fcm_crud.get_user_fcm_tokens(db, user.id)
         if user_tokens:
@@ -319,24 +319,24 @@ def send_broadcast_notification(
 
     # Preparar datos de la notificación
     data = notification.data or {}
-    data.update({
-        "type": "broadcast_notification",
-        "from_admin": str(current_user.id),
-        "category": category or "all"
-    })
+    data.update(
+        {
+            "type": "broadcast_notification",
+            "from_admin": str(current_user.id),
+            "category": category or "all",
+        }
+    )
 
     # Enviar notificación a todos los tokens
     result = fcm_service.send_notification_to_multiple_tokens(
-        tokens=all_tokens,
-        title=notification.title,
-        body=notification.body,
-        data=data
+        tokens=all_tokens, title=notification.title, body=notification.body, data=data
     )
 
     # Guardar registro del historial de notificación masiva
     # Usamos el user_id del super admin que envía para poder filtrar después
     try:
         from app.schemas.notification import NotificationCreate
+
         broadcast_log = NotificationCreate(
             user_id=current_user.id,  # ID del super admin que envía
             title=notification.title,
@@ -351,7 +351,7 @@ def send_broadcast_notification(
                 "users_with_tokens": users_with_tokens,
                 "sent_count": result["success"],
                 "failed_count": result["failure"],
-            }
+            },
         )
         notification_crud.create_notification(db, broadcast_log)
         db.commit()
@@ -461,12 +461,20 @@ def mark_all_notifications_as_read(
 def get_broadcast_history(
     skip: int = 0,
     limit: int = 100,
+    category: Optional[str] = Query(None, description="Filter by category"),
+    start_date: Optional[str] = Query(
+        None, description="Filter by start date (YYYY-MM-DD)"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="Filter by end date (YYYY-MM-DD)"
+    ),
+    admin_id: Optional[int] = Query(None, description="Filter by admin user ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Obtener historial de notificaciones masivas enviadas.
-    
+
     Solo disponible para super admins.
     """
     if not current_user.is_super_admin:
@@ -476,14 +484,45 @@ def get_broadcast_history(
         )
 
     # Obtener todas las notificaciones de tipo broadcast_notification
+    query = db.query(Notification).filter(Notification.type == "broadcast_notification")
+
+    # Filtrar por categoría (en el campo data)
+    if category:
+        from sqlalchemy import cast, String
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        query = query.filter(
+            cast(Notification.data, String).like(f'%"category": "{category}"%')
+        )
+
+    # Filtrar por admin (en el campo data)
+    if admin_id:
+        from sqlalchemy import cast, String
+
+        query = query.filter(
+            cast(Notification.data, String).like(f'%"from_admin": "{admin_id}"%')
+        )
+
+    # Filtrar por rango de fechas
+    if start_date:
+        try:
+            start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Notification.created_at >= start_datetime)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            from datetime import timedelta
+
+            end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(Notification.created_at < end_datetime)
+        except ValueError:
+            pass
+
     # Ordenadas por fecha (más recientes primero)
     notifications = (
-        db.query(Notification)
-        .filter(Notification.type == "broadcast_notification")
-        .order_by(Notification.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
+        query.order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
     )
 
     return [NotificationResponseSchema.model_validate(n) for n in notifications]
