@@ -22,4 +22,10 @@ env/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Firebase / Secrets
+firebase-service-account.json
+*.json
+!package.json
+!tsconfig.json 
