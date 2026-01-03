@@ -429,25 +429,56 @@ def create_admin(
         created_at=datetime.utcnow(),
     )
 
+    # Si se asigna un club al crear el admin, asignarlo
+    club = None
+    if admin_data.club_id:
+        from app.crud import club as club_crud
+        club = club_crud.get_club(db, admin_data.club_id)
+        if not club:
+            raise HTTPException(status_code=404, detail="Club not found")
+        # Verificar que el club no tenga ya un admin asignado
+        if club.admin_user_id is not None:
+            raise HTTPException(status_code=400, detail="Club already has an admin assigned")
+        new_admin.club_id = admin_data.club_id
+
     db.add(new_admin)
     db.commit()
     db.refresh(new_admin)
 
+    # Si se asignó un club, enviar email de bienvenida al administrador
+    if club and admin_data.club_id:
+        try:
+            from app.services.email_service import email_service
+            email_sent = email_service.send_admin_welcome_email(
+                to_email=new_admin.email,
+                admin_name=new_admin.name,
+                club_name=club.name,
+                default_password=admin_data.password  # Usar la contraseña ingresada
+            )
+            if not email_sent:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error enviando email de bienvenida a {new_admin.email}")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error enviando email de bienvenida a {new_admin.email}: {e}")
+
     # Convertir el usuario a un esquema AdminSchema
-    admin_data = {
+    admin_response_data = {
         "id": new_admin.id,
         "name": new_admin.name,
         "email": new_admin.email,
         "phone": new_admin.phone,
-        "club_id": None,  # Ajusta según tu modelo
-        "club_name": None,  # Ajusta según tu modelo
+        "club_id": new_admin.club_id,
+        "club_name": club.name if club else None,
         "is_active": new_admin.is_active,
         "created_at": new_admin.created_at,
-        "updated_at": None,  # Ajusta según tu modelo
+        "updated_at": None,
         "role": "admin",
     }
 
-    return {"admin": admin_data}
+    return {"admin": admin_response_data}
 
 
 @router.put("/admins/{admin_id}", response_model=AdminResponse)
