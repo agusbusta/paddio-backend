@@ -24,6 +24,10 @@ env/
 ehthumbs.db
 Thumbs.db
 
+# Logs
+*.log
+uvicorn.log
+
 # Firebase / Secrets
 firebase-service-account.json
 *.json
