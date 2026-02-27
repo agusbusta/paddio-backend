@@ -51,32 +51,9 @@ El script crea el resource group, el entorno, construye la imagen desde el Docke
 
 ---
 
-## 3.1 Deploy automático: push a main → Azure
+## 3.1 Deploy automático (todo en Azure, sin GitHub)
 
-En este repo hay un workflow de **GitHub Actions** (`.github/workflows/deploy-azure.yml`) que despliega en Azure cada vez que hacés **push a `main`**.
-
-**Configuración única (solo la primera vez):**
-
-1. **Crear un Service Principal en Azure** (con acceso al resource group de la app):
-
-   ```bash
-   az ad sp create-for-rbac --name "paddio-github-deploy" \
-     --role contributor \
-     --scopes /subscriptions/$(az account show --query id -o tsv)/resourceGroups/paddio-backend \
-     --sdk-auth
-   ```
-
-   El comando devuelve un **JSON**. Copiá todo el bloque (desde `{` hasta `}`).
-
-2. **Añadir el JSON como secret en GitHub** (en **este** repo, paddio-backend):
-
-   - Repo en GitHub → **Settings** → **Secrets and variables** → **Actions**
-   - **New repository secret**
-   - Nombre: `AZURE_CREDENTIALS`
-   - Valor: pegar el JSON completo del paso 1
-   - Save
-
-Después de eso, cada `git push origin main` va a ejecutar el workflow y actualizar la Container App en Azure. Las variables de entorno (DATABASE_URL, SECRET_KEY, etc.) no se modifican: siguen siendo las que configuraste en Azure en el primer deploy.
+Para que cada **push a main** despliegue en Azure usando solo servicios Azure (código en **Azure Repos**, pipeline en **Azure Pipelines**), seguí la guía **[AZURE-DEVOPS.md](AZURE-DEVOPS.md)**. Ahí se explica: crear el proyecto en Azure DevOps, subir el código a Azure Repos, configurar la service connection y el pipeline a partir de `azure-pipelines.yml`.
 
 ---
 

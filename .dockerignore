@@ -1,0 +1,33 @@
+# No incluir secretos ni entornos locales
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.log
+
+# Git / tests
+.git
+.gitignore
+.pytest_cache/
+.coverage
+htmlcov/
+*.md
+!README.md
+
+# Documentación de deploy (no necesaria en la imagen)
+DEPLOY_AWS.md

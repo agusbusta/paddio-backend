@@ -26,6 +26,7 @@ class ClubBase(BaseModel):
     name: str
     address: str
     phone: Optional[str] = None
+    email: Optional[str] = None
     description: Optional[str] = None
 
     # Horarios del club
@@ -45,14 +46,30 @@ class ClubBase(BaseModel):
 
 
 class ClubCreate(ClubBase):
-    pass
+    # Datos del administrador (se crea automáticamente)
+    admin_name: str  # Nombre del administrador
+    admin_email: str  # Email del administrador (será el username para login)
 
 
 class ClubUpdate(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
     description: Optional[str] = None
+    # Horarios del club
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
+    turn_duration_minutes: Optional[int] = None
+    price_per_turn: Optional[int] = None
+    # Días de la semana que está abierto
+    monday_open: Optional[bool] = None
+    tuesday_open: Optional[bool] = None
+    wednesday_open: Optional[bool] = None
+    thursday_open: Optional[bool] = None
+    friday_open: Optional[bool] = None
+    saturday_open: Optional[bool] = None
+    sunday_open: Optional[bool] = None
 
 
 class ClubInDB(ClubBase):

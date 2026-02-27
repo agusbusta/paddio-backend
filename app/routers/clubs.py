@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 import secrets
 import string
 
@@ -49,96 +50,109 @@ def search_clubs(
 @router.post("/", response_model=ClubResponse)
 def create_club(
     club: ClubCreate,
-    courts_count: int = Query(1, description="Número de canchas a crear", ge=1, le=20),
-    admin_user_id: Optional[int] = Query(None, description="ID del administrador a asignar al club"),
+    courts_count: int = Query(
+        0, description="Número de canchas a crear (0 = no crear canchas)", ge=0, le=20
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Solo admins o super admins pueden crear clubs
-    if not (current_user.is_admin or current_user.is_super_admin):
-        raise HTTPException(status_code=403, detail="Only admins can create clubs")
+    # Solo super admins pueden crear clubs (y sus administradores)
+    if not current_user.is_super_admin:
+        raise HTTPException(
+            status_code=403, detail="Only super admins can create clubs"
+        )
 
-    # Si es super admin, puede crear clubs y asignar cualquier admin
-    # Si es admin normal, verificar que no tenga ya un club
-    admin_user = None
-    default_password = None
-    
-    if current_user.is_super_admin:
-        # Super admin puede asignar un admin específico o dejar sin asignar
-        if admin_user_id is not None:
-            # Verificar que el admin_user_id sea un admin válido
-            from app.models.user import User
-            admin_user = db.query(User).filter(
-                User.id == admin_user_id,
-                User.is_admin == True,
-                User.is_super_admin == False
-            ).first()
-            if not admin_user:
-                raise HTTPException(status_code=404, detail="Admin user not found")
-            # Verificar que el admin no tenga ya un club asignado
-            if admin_user.club_id is not None:
-                raise HTTPException(status_code=400, detail="Admin already has a club assigned")
-            
-            # Generar contraseña por defecto para el admin
-            # Usar una contraseña segura pero memorable
-            alphabet = string.ascii_letters + string.digits + "!@#$%"
-            default_password = ''.join(secrets.choice(alphabet) for i in range(12))
-            
-            # Actualizar la contraseña del admin con la nueva contraseña por defecto
-            admin_user.hashed_password = get_password_hash(default_password)
-            db.commit()
-    else:
-        # Admin normal solo puede crear un club para sí mismo
-        if current_user.club_id is not None:
-            raise HTTPException(status_code=400, detail="Admin already has a club")
-        admin_user_id = current_user.id
-        admin_user = current_user
+    # Verificar que el email del admin no esté en uso
+    from app.models.user import User
 
-    # Crear el club
-    created_club = crud.create_club(db=db, club=club, admin_user_id=admin_user_id)
-    
-    # Enviar email de bienvenida al administrador si se asignó uno
-    if admin_user and admin_user_id and default_password:
-        try:
-            email_sent = email_service.send_admin_welcome_email(
-                to_email=admin_user.email,
-                admin_name=admin_user.name,
-                club_name=created_club.name,
-                default_password=default_password
-            )
-            if not email_sent:
-                # Log el error pero no fallar la creación del club
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Error enviando email de bienvenida a {admin_user.email}")
-        except Exception as e:
-            # Log el error pero no fallar la creación del club
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error enviando email de bienvenida a {admin_user.email}: {e}")
+    existing_user = db.query(User).filter(User.email == club.admin_email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400, detail="El email del administrador ya está en uso"
+        )
 
-    # Crear canchas automáticamente
+    # Generar contraseña por defecto para el nuevo administrador
+    alphabet = string.ascii_letters + string.digits + "!@#$%"
+    default_password = "".join(secrets.choice(alphabet) for i in range(12))
+
+    # Crear el administrador primero
+    hashed_password = get_password_hash(default_password)
+    new_admin = User(
+        name=club.admin_name,
+        email=club.admin_email,
+        phone=club.phone,  # Usar el teléfono del club para el admin
+        hashed_password=hashed_password,
+        is_admin=True,
+        is_super_admin=False,
+        is_active=True,
+        must_change_password=True,  # Forzar cambio de contraseña en primer login
+        created_at=datetime.utcnow(),
+    )
+    db.add(new_admin)
+    db.flush()  # Para obtener el ID del admin antes de crear el club
+
+    # Crear el club directamente (sin admin_user_id todavía)
+    from app.models.club import Club
+
+    club_data = club.model_dump(exclude={"admin_name", "admin_email"})
+    # El email del club es el mismo que el del administrador
+    club_data["email"] = club.admin_email
+    # Convertir opening_time y closing_time de time a Time si es necesario
+    db_club = Club(**club_data)
+    db.add(db_club)
+    db.flush()  # Para obtener el ID del club
+    db.refresh(db_club)
+    created_club = db_club
+
+    # Asignar el club al administrador
+    new_admin.club_id = created_club.id
+    db.commit()
+    db.refresh(new_admin)
+    db.refresh(created_club)
+
+    # Enviar email de bienvenida al administrador
     try:
-        from app.crud import court as court_crud
-        from app.schemas.court import CourtCreate
+        email_sent = email_service.send_admin_welcome_email(
+            to_email=new_admin.email,
+            admin_name=new_admin.name,
+            club_name=created_club.name,
+            default_password=default_password,
+        )
+        if not email_sent:
+            import logging
 
-        for i in range(courts_count):
-            court_data = CourtCreate(
-                name=f"Cancha {i + 1}",
-                description=f"Cancha {i + 1} del club {created_club.name}",
-                club_id=created_club.id,
-                surface_type="artificial_grass",
-                is_indoor=False,
-                has_lighting=True,
-                is_available=True,
-            )
-            court_crud.create_court(db=db, court=court_data)
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error enviando email de bienvenida a {new_admin.email}")
     except Exception as e:
-        # Log el error pero no fallar la creación del club
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.error(f"Error creating courts for club {created_club.id}: {e}")
+        logger.error(f"Error enviando email de bienvenida a {new_admin.email}: {e}")
+
+    # Crear canchas automáticamente solo si se especifica un número mayor a 0
+    # Si es 0, el administrador las creará desde su dashboard
+    if courts_count > 0:
+        try:
+            from app.crud import court as court_crud
+            from app.schemas.court import CourtCreate
+
+            for i in range(courts_count):
+                court_data = CourtCreate(
+                    name=f"Cancha {i + 1}",
+                    description=f"Cancha {i + 1} del club {created_club.name}",
+                    club_id=created_club.id,
+                    surface_type="artificial_grass",
+                    is_indoor=False,
+                    has_lighting=True,
+                    is_available=True,
+                )
+                court_crud.create_court(db=db, court=court_data)
+        except Exception as e:
+            # Log el error pero no fallar la creación del club
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating courts for club {created_club.id}: {e}")
 
     # Generar estructura de turnos para el club
     try:
@@ -160,10 +174,59 @@ def create_club(
     return created_club
 
 
-@router.get("/", response_model=List[ClubResponse])
+@router.get("/")
 def read_clubs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """
+    Lista todos los clubs con información de sus administradores.
+    """
     clubs = crud.get_clubs(db, skip=skip, limit=limit)
-    return clubs
+
+    # Enriquecer con información del administrador
+    from app.models.user import User
+
+    result = []
+    for club in clubs:
+        club_dict = {
+            "id": club.id,
+            "name": club.name,
+            "address": club.address,
+            "phone": club.phone,
+            "email": club.email,
+            "description": club.description,
+            "opening_time": (
+                club.opening_time.isoformat() if club.opening_time else None
+            ),
+            "closing_time": (
+                club.closing_time.isoformat() if club.closing_time else None
+            ),
+            "turn_duration_minutes": club.turn_duration_minutes,
+            "price_per_turn": club.price_per_turn,
+            "monday_open": club.monday_open,
+            "tuesday_open": club.tuesday_open,
+            "wednesday_open": club.wednesday_open,
+            "thursday_open": club.thursday_open,
+            "friday_open": club.friday_open,
+            "saturday_open": club.saturday_open,
+            "sunday_open": club.sunday_open,
+            "created_at": club.created_at.isoformat() if club.created_at else None,
+            "admin_id": None,
+            "admin_name": None,
+        }
+
+        # Buscar el administrador asociado a este club
+        admin = (
+            db.query(User)
+            .filter(User.club_id == club.id, User.is_admin == True)
+            .first()
+        )
+
+        if admin:
+            club_dict["admin_id"] = admin.id
+            club_dict["admin_name"] = admin.name
+
+        result.append(club_dict)
+
+    return result
 
 
 @router.get("/{club_id}", response_model=ClubResponse)

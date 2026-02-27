@@ -44,7 +44,10 @@ async def search_players(
     # IMPORTANTE: Permitir que todos los usuarios (incluidos jugadores normales) vean todos los jugadores disponibles
     # El token FCM se validará solo cuando se cree la invitación, no en la búsqueda
     # Esto permite que los jugadores vean a todos los jugadores disponibles y puedan elegir libremente
-    # Las restricciones válidas (categoría, género para partidos mixtos) se aplican según el turno
+    # CRÍTICO: NO filtrar por género en la búsqueda. Las restricciones de género para partidos mixtos
+    # se validan al momento de crear la invitación, no al buscar jugadores. Todos los jugadores
+    # (masculinos y femeninos) deben aparecer en la lista de búsqueda.
+    # Las restricciones de categoría sí se aplican aquí si el turno las tiene habilitadas.
     require_fcm_token = False  # No filtrar por token FCM en la búsqueda
     players = invitation_crud.search_players(
         db,

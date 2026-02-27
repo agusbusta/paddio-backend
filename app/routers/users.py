@@ -437,7 +437,11 @@ def create_admin(
         if not club:
             raise HTTPException(status_code=404, detail="Club not found")
         # Verificar que el club no tenga ya un admin asignado
-        if club.admin_user_id is not None:
+        existing_admin = db.query(User).filter(
+            User.club_id == admin_data.club_id,
+            User.is_admin == True
+        ).first()
+        if existing_admin:
             raise HTTPException(status_code=400, detail="Club already has an admin assigned")
         new_admin.club_id = admin_data.club_id
 

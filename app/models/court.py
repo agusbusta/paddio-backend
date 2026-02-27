@@ -41,6 +41,7 @@ class Court(Base):
     club_id = Column(Integer, ForeignKey("clubs.id"), nullable=False)
     surface_type = Column(String)  # e.g., clay, grass, hard
     is_indoor = Column(Boolean, default=False)
+    has_lighting = Column(Boolean, default=False)
     is_available = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

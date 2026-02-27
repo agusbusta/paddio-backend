@@ -1,0 +1,30 @@
+# Pipeline de Azure DevOps: build y deploy a Azure Container Apps
+# Todo corre en Azure: código en Azure Repos, pipeline en Azure Pipelines, app en Container Apps.
+# Ver AZURE-DEVOPS.md para configurar el proyecto, la service connection y las variables.
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  resourceGroup: paddio-backend
+  containerAppName: paddio-api
+
+steps:
+  - checkout: self
+    fetchDepth: 1
+
+  - task: AzureContainerApps@1
+    displayName: Build and deploy to Container Apps
+    inputs:
+      appSourcePath: '$(Build.SourcesDirectory)'
+      # Reemplazá por el nombre de tu service connection (Azure Resource Manager) en Azure DevOps
+      azureSubscription: 'paddio-azure-connection'
+      # Nombre del Azure Container Registry (ej. el que creó az containerapp up en tu resource group)
+      acrName: 'paddioacr'
+      containerAppName: $(containerAppName)
+      resourceGroup: $(resourceGroup)

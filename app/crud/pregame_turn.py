@@ -33,27 +33,95 @@ def get_pregame_turns(
     return query.offset(skip).limit(limit).all()
 
 
-def create_pregame_turn(db: Session, pregame_turn: PregameTurnCreate) -> PregameTurn:
+def create_pregame_turn(
+    db: Session, pregame_turn: PregameTurnCreate, commit: bool = True
+) -> PregameTurn:
+    """
+    Crear un pregame turn.
+
+    Args:
+        db: Sesión de base de datos
+        pregame_turn: Datos del turno a crear
+        commit: Si True, hace commit automático. Si False, solo agrega a la sesión (útil para mantener locks)
+
+    Returns:
+        PregameTurn creado
+    """
     db_pregame_turn = PregameTurn(**pregame_turn.model_dump())
     db.add(db_pregame_turn)
-    db.commit()
-    db.refresh(db_pregame_turn)
+    if commit:
+        db.commit()
+        db.refresh(db_pregame_turn)
+    else:
+        # Flush para obtener el ID sin hacer commit (mantiene el lock)
+        db.flush()
+        db.refresh(db_pregame_turn)
     return db_pregame_turn
 
 
 def update_pregame_turn(
-    db: Session, pregame_turn_id: int, pregame_turn: PregameTurnUpdate
+    db: Session,
+    pregame_turn_id: int,
+    pregame_turn: PregameTurnUpdate,
+    commit: bool = True,
 ) -> Optional[PregameTurn]:
+    """
+    Actualizar un pregame turn.
+
+    Args:
+        db: Sesión de base de datos
+        pregame_turn_id: ID del turno a actualizar
+        pregame_turn: Datos a actualizar
+        commit: Si True, hace commit automático. Si False, solo actualiza en memoria (útil para mantener locks)
+
+    Returns:
+        PregameTurn actualizado o None si no existe
+    """
     db_pregame_turn = get_pregame_turn(db, pregame_turn_id)
     if not db_pregame_turn:
         return None
 
     update_data = pregame_turn.model_dump(exclude_unset=True)
+
+    # CRÍTICO: Proteger player1_id (organizador) - nunca puede ser None
+    # Si se intenta establecer player1_id a None, mantener el valor actual
+    if "player1_id" in update_data and update_data["player1_id"] is None:
+        # El organizador nunca puede ser removido
+        # Si se intenta cancelar player1, mantener su ID
+        if db_pregame_turn.player1_id is not None:
+            # Solo permitir cancelar si se está cancelando explícitamente TODO el turno
+            # Pero en este caso, no deberíamos llegar aquí si es solo una actualización de posición
+            # Mantener el player1_id original
+            update_data["player1_id"] = db_pregame_turn.player1_id
+
+    # CRÍTICO: Si se está actualizando solo side/court_position de un player,
+    # asegurar que el player_id correspondiente NO se elimine
+    # Si no se envía el player_id en el update, mantener el valor actual
+    for player_num in [1, 2, 3, 4]:
+        player_id_field = f"player{player_num}_id"
+        side_field = f"player{player_num}_side"
+        position_field = f"player{player_num}_court_position"
+
+        # Si se está actualizando side o position pero NO se envía el player_id,
+        # asegurar que el player_id se mantenga
+        if (
+            side_field in update_data or position_field in update_data
+        ) and player_id_field not in update_data:
+            # Mantener el player_id actual si existe
+            current_player_id = getattr(db_pregame_turn, player_id_field, None)
+            if current_player_id is not None:
+                update_data[player_id_field] = current_player_id
+
     for field, value in update_data.items():
         setattr(db_pregame_turn, field, value)
 
-    db.commit()
-    db.refresh(db_pregame_turn)
+    if commit:
+        db.commit()
+        db.refresh(db_pregame_turn)
+    else:
+        # Flush para aplicar cambios sin hacer commit (mantiene el lock)
+        db.flush()
+        db.refresh(db_pregame_turn)
     return db_pregame_turn
 
 

@@ -9,6 +9,7 @@ class CourtBase(BaseModel):
     club_id: int
     surface_type: str
     is_indoor: bool = False
+    has_lighting: bool = False
     is_available: bool = True
 
 
@@ -21,6 +22,7 @@ class CourtUpdate(BaseModel):
     description: Optional[str] = None
     surface_type: Optional[str] = None
     is_indoor: Optional[bool] = None
+    has_lighting: Optional[bool] = None
     is_available: Optional[bool] = None
 
 

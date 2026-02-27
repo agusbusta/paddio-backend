@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
 from enum import Enum
+from app.enums.category_restriction import CategoryRestrictionType
 
 
 class PregameTurnStatus(str, Enum):
@@ -15,6 +16,7 @@ class PregameTurnStatus(str, Enum):
 class PregameTurnBase(BaseModel):
     turn_id: int
     court_id: int
+    selected_court_id: Optional[int] = None
     date: datetime
     start_time: str  # Formato "HH:MM"
     end_time: str  # Formato "HH:MM"
@@ -24,8 +26,23 @@ class PregameTurnBase(BaseModel):
     player2_id: Optional[int] = None
     player3_id: Optional[int] = None
     player4_id: Optional[int] = None
-    player_side: Optional[str] = None  # "reves" o "drive"
-    player_court_position: Optional[str] = None  # "izquierda" o "derecha"
+    player1_side: Optional[str] = None  # "reves" o "drive"
+    player1_court_position: Optional[str] = None  # "izquierda" o "derecha"
+    player2_side: Optional[str] = None
+    player2_court_position: Optional[str] = None
+    player3_side: Optional[str] = None
+    player3_court_position: Optional[str] = None
+    player4_side: Optional[str] = None
+    player4_court_position: Optional[str] = None
+    # Restricciones de categoría
+    category_restricted: Optional[bool] = False
+    category_restriction_type: Optional[CategoryRestrictionType] = (
+        CategoryRestrictionType.NONE
+    )
+    organizer_category: Optional[str] = None
+    # Campos para partidos mixtos
+    is_mixed_match: Optional[bool] = False
+    free_category: Optional[str] = None
 
 
 class PregameTurnCreate(PregameTurnBase):
@@ -34,12 +51,30 @@ class PregameTurnCreate(PregameTurnBase):
 
 class PregameTurnUpdate(BaseModel):
     status: Optional[PregameTurnStatus] = None
-    player1_id: Optional[int] = None
+    selected_court_id: Optional[int] = None
+    court_id: Optional[int] = None  # Gestión club: cambio de cancha
+    start_time: Optional[str] = None  # Gestión club: cambio de horario (HH:MM)
+    player1_id: Optional[int] = None  # None para cancelar posición
     player2_id: Optional[int] = None
     player3_id: Optional[int] = None
     player4_id: Optional[int] = None
-    player_side: Optional[str] = None
-    player_court_position: Optional[str] = None
+    player1_side: Optional[str] = None
+    player1_court_position: Optional[str] = None
+    player2_side: Optional[str] = None
+    player2_court_position: Optional[str] = None
+    player3_side: Optional[str] = None
+    player3_court_position: Optional[str] = None
+    player4_side: Optional[str] = None
+    player4_court_position: Optional[str] = None
+    # Restricciones de categoría
+    category_restricted: Optional[bool] = None
+    category_restriction_type: Optional[CategoryRestrictionType] = None
+    organizer_category: Optional[str] = None
+    # Campos para partidos mixtos
+    is_mixed_match: Optional[bool] = None
+    free_category: Optional[str] = None
+    # Mensaje de justificación para cancelación (solo para cancelaciones individuales)
+    cancellation_message: Optional[str] = None
 
 
 class PregameTurnInDB(PregameTurnBase):

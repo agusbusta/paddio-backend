@@ -12,6 +12,7 @@ class Club(Base):
     name = Column(String, nullable=False)
     address = Column(String, nullable=False)
     phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
     description = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -21,8 +22,7 @@ class Club(Base):
     turn_duration_minutes = Column(
         Integer, default=90
     )  # Duración de cada turno en minutos (1.5 horas)
-    price_per_turn = Column(Integer, default=0)  # Precio por turno en centavos
-
+    price_per_turn = Column(Integer, default=0)
     # Días de la semana que está abierto
     monday_open = Column(Boolean, default=True)
     tuesday_open = Column(Boolean, default=True)
@@ -38,3 +38,5 @@ class Club(Base):
     admin = relationship("User", back_populates="club")
     # Relación con los turnos del club
     turns = relationship("Turn", back_populates="club", cascade="all, delete-orphan")
+    # Relación con usuarios que tienen este club como favorito
+    favorited_by_users = relationship("UserFavoriteClub", back_populates="club")

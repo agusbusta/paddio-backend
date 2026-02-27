@@ -25,14 +25,18 @@ def read_matches(
     limit: int = 100,
     status: Optional[str] = Query(None, description="Filter by match status"),
     club_id: Optional[int] = Query(None, description="Filter by club ID"),
-    start_date: Optional[str] = Query(None, description="Filter by start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="Filter by end date (YYYY-MM-DD)"),
+    start_date: Optional[str] = Query(
+        None, description="Filter by start date (YYYY-MM-DD)"
+    ),
+    end_date: Optional[str] = Query(
+        None, description="Filter by end date (YYYY-MM-DD)"
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Obtener lista de partidos.
-    
+
     Solo disponible para super admins.
     """
     if not current_user.is_super_admin:
@@ -53,6 +57,7 @@ def read_matches(
     # Filtrar por club (a través de la relación court)
     if club_id:
         from app.models.court import Court
+
         query = query.join(Court).filter(Court.club_id == club_id)
 
     # Filtrar por rango de fechas
@@ -66,6 +71,7 @@ def read_matches(
     if end_date:
         try:
             from datetime import timedelta
+
             end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
             query = query.filter(Match.start_time < end_datetime)
         except ValueError:
@@ -101,6 +107,7 @@ def read_matches(
                     "id": player.id,
                     "name": player.name,
                     "email": player.email,
+                    "gender": player.gender if hasattr(player, "gender") else None,
                 }
                 for player in match.players
             ]
